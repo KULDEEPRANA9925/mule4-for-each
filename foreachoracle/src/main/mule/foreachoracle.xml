@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="ad51e72e-0dda-49c1-9880-4c158367500b" >
+		<db:oracle-connection host="localhost" user="kuldeep" password="test" />
+	</db:config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="9e0dadaa-c689-4466-b145-e298c99a7cd5" >
+		<file:connection workingDir="H:\mule-batch\input" />
+	</file:config>
+	<file:config name="File_Config1" doc:name="File Config" doc:id="635983a1-68ba-409d-9860-9dca343592be" >
+		<file:connection workingDir="H:\mule-batch\input" />
+	</file:config>
+	<flow name="foreachmysqlFlow" doc:id="9295e847-974e-454f-8712-f14aa87ccb7f" >
+		<file:listener doc:name="On New or Updated File" doc:id="9cb5e6ec-5d4d-4eea-9cd7-f647817dc05c" config-ref="File_Config1" moveToDirectory="H:\mule-batch\archive">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+			<file:matcher filenamePattern="*.csv" />
+		</file:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="93981928-f9e0-421b-8454-806b5f083b71" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="d0dfdb05-7b77-4808-bf1f-71963c5e6c24" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map {
+	
+	id: $.id,
+	name: $.name,
+	department: $.department
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="68a24850-2dc2-4d49-80c2-d5d063b63fa0" >
+			<logger level="INFO" doc:name="Logger" doc:id="438b44c9-77ef-4507-ae24-16ddcbed9f6c" message="#[payload]"/>
+			<db:insert doc:name="Insert" doc:id="8ed28acc-ba7c-466b-9609-cbffd8ba5b4a" config-ref="Database_Config">
+				<db:sql >INSERT INTO developer(id, name, department)
+VALUES(:id, :name, :department)</db:sql>
+				<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+			</db:insert>
+		</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="3eb585cc-789e-45d3-8722-e740d8dcac5c" message="#[payload]"/>
+	</flow>
+</mule>
